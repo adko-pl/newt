@@ -352,11 +352,27 @@ NSString *cutoffDate(double limit) {
   NSDictionary *site = [persistence siteForKey:siteKey];
   NSString *userId = [site objectForKey:@"user_id"];
   
-  NSArray *interestingTagsArray = [site objectForKey:@"favourite_tags"];
+  NSArray *tagsArray = [site objectForKey:@"favourite_tags"];
   NSSet *interestingTags = nil;
-  if (interestingTagsArray != nil && [interestingTagsArray count] > 0) {
-    interestingTags = [NSSet setWithArray:interestingTagsArray];
-  }
+  NSSet *ignoredTags = nil;
+  if (tagsArray != nil && [tagsArray count] > 0) {
+    NSMutableArray *interestingTagsArray = [NSMutableArray arrayWithCapacity:[tagsArray count]];      
+    NSMutableArray *ignoredTagsArray = [NSMutableArray arrayWithCapacity:[tagsArray count]];            
+    for(NSString* tag in tagsArray) {
+      if([tag hasPrefix:@"-"]) {
+        [ignoredTagsArray addObject:[tag substringFromIndex:1]];
+      } else {
+        [interestingTagsArray addObject:tag];
+      }
+    }
+      
+    if([interestingTagsArray count] > 0) {
+      interestingTags = [NSSet setWithArray:interestingTagsArray];
+    }
+    if([ignoredTagsArray count] > 0) {
+      ignoredTags = [NSSet setWithArray:ignoredTagsArray];
+    }
+  }    
   
   for (NSDictionary *question in questions) {
     NSArray *tags = [question objectForKey:@"tags"];
@@ -364,6 +380,11 @@ NSString *cutoffDate(double limit) {
     
     // filter questions by interesting tags
     if (interestingTags != nil && ![interestingTags intersectsSet:[NSSet setWithArray:tags]]) {
+      continue;
+    }
+      
+    // filter questions by ignored tags
+    if(ignoredTags != nil && [ignoredTags intersectsSet:[NSSet setWithArray:tags]]) {
       continue;
     }
     
